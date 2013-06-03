@@ -15,9 +15,9 @@
   </Resources>
   <Applications>
     <Application Id="App" Executable="$targetnametoken$.exe" EntryPoint="TrafficCams.App">
-      <VisualElements DisplayName="Traffic Cams" Logo="Assets\Logo.png" SmallLogo="Assets\SmallLogo.png" Description="Mashup of Bing Maps with TomTom traffic cams" ForegroundText="light" BackgroundColor="#00FF00">
-        <DefaultTile ShowName="allLogos" ShortName="Starter Kit" />
-        <SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#000000" />
+      <VisualElements DisplayName="Traffic Cams" Logo="Assets\Logo.png" SmallLogo="Assets\SmallLogo.png" Description="Mashup of Bing Maps with TomTom traffic cams" ForegroundText="light" BackgroundColor="#000080">
+        <DefaultTile ShowName="allLogos" ShortName="Traffic Cams" />
+        <SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#000080" />
         <InitialRotationPreference>
           <Rotation Preference="landscape" />
         </InitialRotationPreference>
