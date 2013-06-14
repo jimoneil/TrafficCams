@@ -16,10 +16,10 @@ namespace TrafficCams.Common
                 return ((Boolean)value) ? Visibility.Visible : Visibility.Collapsed;
 
             if (value is Int32)
-                return ((Int32)value == 0) ? Visibility.Collapsed : Visibility.Visible;
+                return ((Int32) value == 0) ? Visibility.Collapsed : Visibility.Visible;
 
             if (value is Double)
-                return ((Int32)value == 0) ? Visibility.Collapsed : Visibility.Visible;
+                return ((Double) value == 0) ? Visibility.Collapsed : Visibility.Visible;
 
             return value;
         }
