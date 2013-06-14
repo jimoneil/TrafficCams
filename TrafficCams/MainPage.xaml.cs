@@ -42,8 +42,8 @@ namespace TrafficCams
             /// Zoom level of map view
             /// </summary>
             [DataMember]
-            public double Zoom { get; set; }            
-            
+            public double Zoom { get; set; }
+
             /// <summary>
             /// Boundaries of the map when the last refresh occurred
             /// </summary>
@@ -77,7 +77,7 @@ namespace TrafficCams
                     new System.Collections.Generic.KeyValuePair<string, object>("InitialRunDate", DateTime.UtcNow.ToString()));
 
             // whenever map view changes track center point and zoom level in page state
-            TheMap.ViewChangeEnded += (s, e) => 
+            TheMap.ViewChangeEnded += (s, e) =>
                 {
                     _pageState.MapCenter = new LatLong(TheMap.TargetCenter.Latitude, TheMap.TargetCenter.Longitude);
                     _pageState.Zoom = TheMap.TargetZoomLevel;
@@ -89,7 +89,7 @@ namespace TrafficCams
             // whenever the contents of left panel are refreshed, save the map coordinates that were in play as part of the page state
             LeftPanel.Refreshed += (s, e) =>
                 {
-                   _pageState.MapBox = new BoundingBox(TheMap.TargetBounds.North, TheMap.TargetBounds.South, TheMap.TargetBounds.West, TheMap.TargetBounds.East);
+                    _pageState.MapBox = new BoundingBox(TheMap.TargetBounds.North, TheMap.TargetBounds.South, TheMap.TargetBounds.West, TheMap.TargetBounds.East);
                 };
 
             // whenver a new item is selected in the left panel, update the map pins and save the item selected as part of the page state
@@ -126,7 +126,7 @@ namespace TrafficCams
             // The BingMaps API allows use of a "session key" if the application leverages the Bing Maps control. By using the session
             // key instead of the API key, only one transaction is logged agains the key versus one transaction for every API call! This 
             // code sets the key asynchronously and stored it as a resource so it's available when the REST API's are invoked.
-            TheMap.Loaded += async (s, e) => 
+            TheMap.Loaded += async (s, e) =>
             {
                 if (!Application.Current.Resources.ContainsKey("BingMapsSessionKey"))
                     Application.Current.Resources.Add("BingMapsSessionKey", await TheMap.GetSessionIdAsync());
@@ -199,7 +199,7 @@ namespace TrafficCams
                 }
             }
         }
-        
+
         /// <summary>
         /// Fires when map panning is complete, and the current bounds of the map can be accessed to apply the points of interest
         /// (note that using TargetBounds in lieu of the event handler led to different results for the same target location depending ont 
@@ -258,7 +258,7 @@ namespace TrafficCams
         /// <param name="pageState">State of the page to be saved in case of app termination while suspended</param>
         protected override void SaveState(Dictionary<string, object> pageState)
         {
-            pageState["MainPageState"] =_pageState;
+            pageState["MainPageState"] = _pageState;
         }
 
         #region AppBar implementations
