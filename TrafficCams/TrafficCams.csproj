@@ -111,24 +111,22 @@
       <DependentUpon>App.xaml</DependentUpon>
     </Compile>
     <Compile Include="Common\ApiStatusToVisibilityConverter.cs" />
+    <Compile Include="Common\AsyncLock.cs" />
     <Compile Include="Common\BindableBase.cs" />
     <Compile Include="Common\CityStateStringConverter.cs" />
     <Compile Include="Common\LayoutAwarePanel.cs" />
+    <Compile Include="Common\PlaybackVisibilityConverter.cs" />
+    <Compile Include="Common\PlayPauseImageConverter.cs" />
+    <Compile Include="Common\PlusOneConverter.cs" />
     <Compile Include="Common\StringToVisibilityConverter.cs" />
     <Compile Include="Common\LayoutAwarePage.cs" />
     <Compile Include="Common\SuspensionManager.cs" />
     <Compile Include="Common\ValueTypeToVisibilityConverter.cs" />
+    <Compile Include="Flyouts\WebViewFlyout.xaml.cs">
+      <DependentUpon>WebViewFlyout.xaml</DependentUpon>
+    </Compile>
     <Compile Include="Mapping\CurrentLocationPin.xaml.cs">
       <DependentUpon>CurrentLocationPin.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Flyouts\AboutFlyout.xaml.cs">
-      <DependentUpon>AboutFlyout.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Flyouts\SupportFlyout.xaml.cs">
-      <DependentUpon>SupportFlyout.xaml</DependentUpon>
-    </Compile>
-    <Compile Include="Flyouts\PrivacyFlyout.xaml.cs">
-      <DependentUpon>PrivacyFlyout.xaml</DependentUpon>
     </Compile>
     <Compile Include="Mapping\IAnchorable.cs" />
     <Compile Include="SearchPanel.xaml.cs">
@@ -157,6 +155,10 @@
     <None Include="TrafficCams_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
+    <Page Include="Flyouts\WebViewFlyout.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
     <Page Include="LocationSearchResultsPage.xaml">
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
@@ -165,27 +167,20 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
-    <Page Include="Flyouts\PrivacyFlyout.xaml">
-      <SubType>Designer</SubType>
-      <Generator>MSBuild:Compile</Generator>
-    </Page>
-    <Page Include="Flyouts\AboutFlyout.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
-    <Page Include="Flyouts\SupportFlyout.xaml">
-      <Generator>MSBuild:Compile</Generator>
-      <SubType>Designer</SubType>
-    </Page>
     <Page Include="Mapping\CurrentLocationPin.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
     <Content Include="Assets\cameraSearch.png" />
     <Content Include="Assets\Logo.scale-100.png" />
+    <Content Include="Assets\pause.png" />
+    <Content Include="Assets\play.png" />
     <Content Include="Assets\SmallLogo.scale-100.png" />
     <Content Include="Assets\SplashScreen.scale-100.png" />
     <Content Include="Assets\StoreLogo.scale-100.png" />
+    <Content Include="Flyouts\About.htm" />
+    <Content Include="Flyouts\Privacy.htm" />
+    <Content Include="Flyouts\Support.htm" />
     <Content Include="Images\bing.png" />
     <Content Include="Images\tomtom.png" />
     <Content Include="Images\warning.png" />

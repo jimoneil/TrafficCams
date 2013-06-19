@@ -18,9 +18,6 @@
       <VisualElements DisplayName="Traffic Cams" Logo="Assets\Logo.png" SmallLogo="Assets\SmallLogo.png" Description="Mashup of Bing Maps with TomTom traffic cams" ForegroundText="light" BackgroundColor="#000080">
         <DefaultTile ShowName="allLogos" ShortName="Traffic Cams" />
         <SplashScreen Image="Assets\SplashScreen.png" BackgroundColor="#000080" />
-        <InitialRotationPreference>
-          <Rotation Preference="landscape" />
-        </InitialRotationPreference>
       </VisualElements>
       <Extensions>
         <Extension Category="windows.protocol">

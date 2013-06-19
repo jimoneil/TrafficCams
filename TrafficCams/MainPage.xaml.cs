@@ -13,6 +13,7 @@ using Windows.UI.Popups;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Navigation;
+using Windows.UI.ViewManagement;
 
 //
 // LICENSE: http://aka.ms/LicenseTerms-SampleApps
@@ -60,7 +61,7 @@ namespace TrafficCams
 
         Geolocator _geolocator = new Geolocator();
         CurrentLocationPin _locationMarker = new CurrentLocationPin();
-        Boolean _firstRun;
+        Boolean _firstRun; 
 
         public MainPage()
         {
@@ -143,6 +144,12 @@ namespace TrafficCams
                     })
                 );
             };
+
+            // propagate snapped state change to the user control
+            Window.Current.SizeChanged += (s, e) =>
+                {
+                    VisualStateManager.GoToState(LeftPanel, ApplicationView.Value.ToString(), true);
+                };
         }
 
         /// <summary>

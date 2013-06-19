@@ -155,6 +155,8 @@ namespace TrafficCams
         /// <param name="args">Details about the window creation.</param>
         protected override void OnWindowCreated(WindowCreatedEventArgs args)
         {
+            base.OnWindowCreated(args);
+
             // handle search request when app is active
             var searchPane = SearchPane.GetForCurrentView();
             searchPane.PlaceholderText = "Enter a city or point of interest";
@@ -172,9 +174,6 @@ namespace TrafficCams
                 }
             };
 
-            //
-            // TODO: (optional) create a customized list of result (or query) suggestions; otherwise, remove the event handler
-            //
             searchPane.SuggestionsRequested += (s, e) =>
             {
                 foreach (var option in APIMASH_TomTom.TomTomApi.SearchSuggestionList)
@@ -192,9 +191,6 @@ namespace TrafficCams
                 }
             };
 
-            //
-            // TODO: (optional) act upon the option selected from the Search flyout, or remove the event handler if not needed
-            //
             searchPane.ResultSuggestionChosen += (s, e) =>
             {
                 var selectedLocation = APIMASH_TomTom.TomTomApi.SearchSuggestionList.Where(x => x.Id == e.Tag).FirstOrDefault();
@@ -213,20 +209,17 @@ namespace TrafficCams
             var settingsPane = SettingsPane.GetForCurrentView();
             settingsPane.CommandsRequested += (s, e) =>
                 {
-                    //
-                    // TODO: (optional) add or remove flyouts to/from the Settings charm. 
-                    //
                     e.Request.ApplicationCommands.Add(
                         new SettingsCommand("About", "About",
-                                            (x) => ShowFlyout("About", new AboutFlyout()))
+                                            (x) => ShowFlyout("About", new WebViewFlyout("/Flyouts/About.htm")))
                     );
                     e.Request.ApplicationCommands.Add(
                         new SettingsCommand("Support", "Support",
-                                            (x) => ShowFlyout("Support", new SupportFlyout()))
+                                            (x) => ShowFlyout("Support", new WebViewFlyout("/Flyouts/Support.htm")))
                     );
                     e.Request.ApplicationCommands.Add(
                         new SettingsCommand("Privacy", "Privacy",
-                                            (x) => ShowFlyout("Privacy", new PrivacyFlyout()))
+                                            (x) => ShowFlyout("Privacy", new WebViewFlyout("/Flyouts/Privacy.htm")))
                     );
                 };
         }

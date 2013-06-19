@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Threading.Tasks;
 using System.Xml.Serialization;
 using Windows.UI.Xaml;
@@ -14,15 +15,110 @@ using Windows.UI.Xaml.Media.Imaging;
 // LICENSE: http://aka.ms/LicenseTerms-SampleApps
 //
 
-//
-// TODO: use this example as a template for implementing your location-aware API that will associate points-of-interest
-//       with the map functionality built into this application. Th ViewModel class includes the information of interest 
-//       you want to show in the left panel of the app, it should implement IMappable so it will have the necessary fields 
-//       to associate with push pins on the map
-//
-
 namespace APIMASH_TomTom
 {
+    public class Queue<T>
+    {
+        private T[] _queue;
+        private Int32 _head = -1;
+        private Int32 _tail = -1;
+        private Int32 _size;
+
+        private object _syncroot = new Object();
+
+        public Boolean IsFull { get { return ((_tail + 1) % _size) == _head; } }
+        public Boolean IsEmpty { get { return _head == -1; } }
+
+        public Queue(Int32 size)
+        {
+            _size = size;
+            _queue = new T[size];
+        }
+
+        public void Clear()
+        {
+            lock (_syncroot)
+            {
+                _head = _tail = -1;
+            }
+        }   
+
+        public void Enqueue(T item)
+        {
+            lock (_syncroot)
+            {
+                var newTail = (_tail + 1) % _size;
+                if (newTail == _head)
+                    throw new InvalidOperationException("Cannot enqueue new item because queue is at capacity.");
+                else
+                {
+                    _tail = newTail;
+                    _queue[_tail] = item;
+
+                    if (_head == -1) _head = _tail;
+                }
+            }
+        }
+
+        public T Dequeue()
+        {
+            lock (_syncroot)
+            {
+                if (_head == -1)
+                    throw new InvalidOperationException("Cannot dequeue item because queue is empty.");
+                else
+                {
+                    T item = _queue[_head];
+                    if (_head == _tail)
+                        _head = _tail = -1;
+                    else
+                        _head = (_head + 1) % _size;
+                    return item;
+                }
+            }
+        }
+
+        public override String ToString()
+        {
+            String s = String.Empty;
+            if (_head != -1)
+            {
+                for (var i = _head; i != _tail; i = (i + 1) % _size)
+                    s = s + _queue[i].ToString() + " ";
+                s = s + _queue[_tail].ToString();
+            }
+
+            s = String.Format("{0} [{1}:{2}]", s, _head.ToString(), _tail.ToString());
+            return s;
+        }
+    }
+
+    public class TimeLapseImage : BindableBase
+    {
+        public DateTime Timestamp
+        {
+            get { return _timestamp; }
+            private set { SetProperty(ref _timestamp, value); } 
+        }
+        private DateTime _timestamp;
+
+        public BitmapImage Image 
+        {
+            get { return _image; }
+            private set { SetProperty(ref _image, value); } 
+
+        }
+        private BitmapImage _image;
+
+        public String FormattedTime { get { return _timestamp.ToLocalTime().ToString("G"); } }
+
+        public TimeLapseImage(BitmapImage image, DateTime timestamp)
+        {
+            Timestamp = timestamp;
+            Image = image;
+        }
+    }
+
     /// <summary>
     /// View model class for list of cameras returned from a TomTom Traffic Cams query
     /// </summary>
@@ -32,20 +128,14 @@ namespace APIMASH_TomTom
         public Int32 CameraId { get; set; }
         public String Name { get; set; }
         public String Orientation { get; set; }
-        public Int32 RefreshRate { get; set; }
+        public Double RefreshRate { get; set; }
+        internal byte[] ImageBytes { get; set; }
 
-        private BitmapImage _image;
-        public BitmapImage Image
+        private ObservableCollection<TimeLapseImage> _timeLapse;
+        public ObservableCollection<TimeLapseImage> TimeLapse
         {
-            get { return _image; }
-            set { SetProperty(ref _image, value); }
-        }
-
-        private DateTime _lastRefresh;
-        public DateTime LastRefresh
-        {
-            get { return _lastRefresh; }
-            set { SetProperty(ref _lastRefresh, value); }
+            get { return _timeLapse; }
+            set { SetProperty(ref _timeLapse, value); }
         }
 
         public Double DistanceFromCenter { get; set; }
@@ -111,9 +201,10 @@ namespace APIMASH_TomTom
                                      CameraId = c.cameraId,
                                      Name = c.cameraName,
                                      Orientation = c.orientation.Replace("Traffic closest to camera is t", "T"),
-                                     RefreshRate = c.refreshRate,
+                                     RefreshRate = c.refreshRate / 1000d,
                                      Position = new LatLong(c.latitude, c.longitude),
-                                     DistanceFromCenter = MapUtilities.HaversineDistance(centerPoint, new LatLong(c.latitude, c.longitude))
+                                     DistanceFromCenter = MapUtilities.HaversineDistance(centerPoint, new LatLong(c.latitude, c.longitude)),
+                                     TimeLapse = new ObservableCollection<TimeLapseImage>()
                                  }))
                     stagingList.Add(camera);
 
@@ -130,10 +221,21 @@ namespace APIMASH_TomTom
             return resultsWereTruncated;
         }
 
-        public static void PopulateViewModel(BitmapImage camImage, TomTomCameraViewModel viewModel)
+        public static Boolean PopulateViewModel(BitmapImage camImage, Byte[] imageBytes, TomTomCameraViewModel viewModel)
         {
-            viewModel.Image = camImage;
-            viewModel.LastRefresh = DateTime.UtcNow;
+            // guard against current camera reference going null due to a refresh
+            if (viewModel == null) return false;
+
+            // only add the image if there are none or it differ from last one stored for this camera
+            if ((viewModel.TimeLapse.Count == 0) || (!Enumerable.SequenceEqual<Byte>(viewModel.ImageBytes, imageBytes)))
+            {
+                viewModel.ImageBytes = imageBytes;
+                viewModel.TimeLapse.Add(new TimeLapseImage(camImage, DateTime.UtcNow));
+
+                return true;
+            }
+            else
+                return false;
         }
     }
 
@@ -162,6 +264,25 @@ namespace APIMASH_TomTom
         }
         private ObservableCollection<TomTomCameraViewModel> _cameras =
             new ObservableCollection<TomTomCameraViewModel>();
+
+        public TomTomCameraViewModel SelectedCamera
+        {
+            get { return _selectedCamera; }
+            set { SetProperty(ref _selectedCamera, value); }
+        }
+        private TomTomCameraViewModel _selectedCamera;
+
+        public Int32 ImageCount
+        {
+            get {  
+                return _cameras.Select((c) => c.TimeLapse.Count).Sum();
+            }
+            set
+            {
+                SetProperty(ref _imageCount, value);
+            }
+        }
+        private Int32 _imageCount;
     }
 
     /// <summary>
@@ -169,6 +290,9 @@ namespace APIMASH_TomTom
     /// </summary>
     public sealed class TomTomApi : ApiBase
     {
+        private Queue<Int32> TimeLapseQueue = new Queue<Int32>(1000);
+        private Object _resultsLock = new Object();
+
         public TomTomViewModel TomTomViewModel = new TomTomViewModel();
         protected override String _apiKey
         {
@@ -189,9 +313,14 @@ namespace APIMASH_TomTom
         public async Task<APIMASH.ApiResponseStatus> GetCameras(BoundingBox b, Int32 maxResults = 0)
         {
             // clear the results
-            TomTomViewModel.Results.Clear();
-            TomTomViewModel.ResultsTruncated = false;            
-            
+            lock (_resultsLock)
+            {
+                TimeLapseQueue.Clear();
+                TomTomViewModel.Results.Clear();
+                TomTomViewModel.ResultsTruncated = false;
+
+            }
+
             // invoke the API
             var apiResponse = await Invoke<TomTomCamerasModel.cameras>(
                 "http://api.tomtom.com/trafficcams/boxquery?top={0}&bottom={1}&left={2}&right={3}&format=xml&key={4}",
@@ -201,11 +330,14 @@ namespace APIMASH_TomTom
             // if successful, copy relevant portions from model to the view model
             if (apiResponse.IsSuccessStatusCode)
             {
-                TomTomViewModel.ResultsTruncated = TomTomCamerasModel.PopulateViewModel(
-                    apiResponse.DeserializedResponse,
-                    TomTomViewModel.Results,
-                    new LatLong((b.North + b.South) / 2, (b.West + b.East) / 2),
-                    maxResults);
+                lock (_resultsLock)
+                {
+                    TomTomViewModel.ResultsTruncated = TomTomCamerasModel.PopulateViewModel(
+                        apiResponse.DeserializedResponse,
+                        TomTomViewModel.Results,
+                        new LatLong((b.North + b.South) / 2, (b.West + b.East) / 2),
+                        maxResults);
+                }
             }
             else
             {
@@ -234,6 +366,7 @@ namespace APIMASH_TomTom
         public async Task<APIMASH.ApiResponseStatus> GetCameraImage(TomTomCameraViewModel camera)
         {
             BitmapImage cameraImage = null;
+            Byte[] imageBytes;
 
             // invoke the API (explicit deserializer provided because the image responses from TomTom don't include a Content-Type header
             var apiResponse = await Invoke<BitmapImage>(
@@ -242,40 +375,61 @@ namespace APIMASH_TomTom
                 camera.CameraId,
                 this._apiKey);
 
+
+
             // if successful, grab image as deserialized response
             if (apiResponse.IsSuccessStatusCode)
             {
                 cameraImage = apiResponse.DeserializedResponse;
+                imageBytes = apiResponse.RawResponse;
             }
 
             // otherwise, use some stock image to reflect error condition
-            else if (apiResponse.StatusCode == HttpStatusCode.NotFound)
-            {
-                cameraImage = new BitmapImage(new Uri("ms-appx:///APIMASH_APIs/Assets/camera404.png"));
-            }
             else
             {
-                cameraImage = new BitmapImage(new Uri("ms-appx:///APIMASH_APIs/Assets/cameraError.png"));
+                var errorImage = (apiResponse.StatusCode == HttpStatusCode.NotFound) ?
+                    "ms-appx:///APIMASH_APIs/Assets/camera404.png" :
+                    "ms-appx:///APIMASH_APIs/Assets/cameraError.png";
+
+                cameraImage = new BitmapImage(new Uri(errorImage));
+                imageBytes = Encoding.UTF8.GetBytes(errorImage);
             }
 
-            // populate the ViewModel with the image
-            TomTomCamerasModel.PopulateViewModel(cameraImage, camera);
+            lock (_resultsLock)
+            {
+                // populate the ViewModel with the image and if image was added, determine if we're at capacity and remove oldest picture
+                if (TomTomCamerasModel.PopulateViewModel(cameraImage, imageBytes, camera))
+                    UpdateTimeLapseQueue(camera.CameraId);
+            }
 
             // return a success status (there will always be an image returned)
             return ApiResponseStatus.Default;
         }
+
+        private void UpdateTimeLapseQueue(Int32 newCamId)
+        {
+            // if the max number of stored images is reached remove the oldest one
+            if (TimeLapseQueue.IsFull)
+            {
+                var oldestCamId = TimeLapseQueue.Dequeue();
+
+                var oldestCam = TomTomViewModel.Results
+                                   .Where((c) => c.CameraId == oldestCamId)
+                                   .FirstOrDefault();
+                if ((oldestCam != null) && (oldestCam.TimeLapse.Count > 0))
+                    oldestCam.TimeLapse.RemoveAt(0);
+            }
+
+            // record the new image
+            TimeLapseQueue.Enqueue(newCamId);
+        }
+
 
         /// <summary>
         /// Pre-populated list of search results based on known positions of traffic cameras
         /// </summary>
         public static IEnumerable<IMappable> SearchSuggestionList = new List<IMappable>()
         {
-            //
-            // TODO: (option) if implementing the Search contract, you can provide search result suggestions by
-            //       populating this static list of IMappable objects. Up to five of these suggestions will show
-            //       automatically in the Search charm pane as the user edits the query text. Selecting one of the 
-            //       known search results will navigate them to a location with known points-of-interest in the vicinity.
-            //
             new SearchResultSuggestion("Albany, New York", 42.6519355773926, -73.7580604553223),
             new SearchResultSuggestion("Allentown, Pennsylvania", 40.6058902740479, -75.4747734069824),
             new SearchResultSuggestion("Altoona, Pennsylvania", 40.5032196044922, -78.3982429504395),
