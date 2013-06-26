@@ -1,12 +1,18 @@
 ﻿using APIMASH.Mapping;
-using TrafficCams.Common;
-using TrafficCams.Mapping;
 using APIMASH_TomTom;
 using Bing.Maps;
 using System;
+using System.Collections.Generic;
 using System.Collections.Specialized;
 using System.Linq;
+using System.Runtime.InteropServices.WindowsRuntime;
 using System.Threading.Tasks;
+using TrafficCams.Common;
+using TrafficCams.Mapping;
+using Windows.ApplicationModel.DataTransfer;
+using Windows.Foundation;
+using Windows.Storage;
+using Windows.Storage.Streams;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 
@@ -112,6 +118,50 @@ namespace TrafficCams
             _tomTomApi.TomTomViewModel.Results.CollectionChanged += Results_CollectionChanged;
         }
 
+        public async void GetSharedData(DataTransferManager sender, DataRequestedEventArgs args)
+        {
+            try
+            {
+                var cam = _tomTomApi.TomTomViewModel.SelectedCamera;
+                if ((cam != null) && (cam.TimeLapse.Count > 0))
+                {
+
+                    DataRequestDeferral deferral = args.Request.GetDeferral();
+
+                    args.Request.Data.Properties.Title = String.Format("TomTom Camera: {0}", cam.CameraId);
+                    args.Request.Data.Properties.Description = cam.Name;
+
+                    // share a file
+                    var file = await StorageFile.CreateStreamedFileAsync(
+                        String.Format("{0}_{1}.jpg", cam.CameraId, DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")),
+                        async stream =>
+                        {
+                            await stream.WriteAsync(cam.LastImageBytes.AsBuffer());
+                            await stream.FlushAsync();
+                            stream.Dispose();
+                        },
+                        null);
+                    args.Request.Data.SetStorageItems(new List<IStorageItem> { file });
+
+                    // share as bitmap
+                    InMemoryRandomAccessStream raStream = new InMemoryRandomAccessStream();
+                    await raStream.WriteAsync(cam.LastImageBytes.AsBuffer());
+                    await raStream.FlushAsync();
+                    args.Request.Data.SetBitmap(RandomAccessStreamReference.CreateFromStream(raStream));
+
+                    deferral.Complete();
+                }
+                else
+                {
+                    args.Request.FailWithDisplayText("Select a camera to share its latest image.");
+                }
+            }
+            catch (Exception ex)
+            {
+                args.Request.FailWithDisplayText(ex.Message);
+            }
+        }
+
         private Object _flipCollectionLock = new Object();
         async void SnapshotTimer_Tick(object sender, object e)
         {
@@ -135,7 +185,6 @@ namespace TrafficCams
                         if (FlipViewCollectionSource.View != null) FlipViewCollectionSource.View.MoveCurrentToLast();
                 }
             }
-
         }
 
         /// <summary>
@@ -146,7 +195,7 @@ namespace TrafficCams
         private async Task ProcessSelectedItem(object item)
         {
             // stop timer thread
-            SnapshotTimer.Stop();
+            StopRefreshing();
 
             // set view model
             _tomTomApi.TomTomViewModel.SelectedCamera = item as TomTomCameraViewModel;
@@ -182,8 +231,7 @@ namespace TrafficCams
         public async Task Refresh(BoundingBox box, String id = null)
         {
             // stop timers
-            SnapshotTimer.Stop();
-            StopMovie();
+            StopRefreshing();
 
             // refresh cam list
             this.DefaultViewModel["ApiStatus"] = await _tomTomApi.GetCameras(box, this.MaxResults);
@@ -247,10 +295,11 @@ namespace TrafficCams
                         IMappable mapItem = (IMappable)item;
 
                         PointOfInterestPin poiPin = new PointOfInterestPin(mapItem);
-                        poiPin.Selected += (s, e2) =>
+                        poiPin.Selected += (s2, e2) =>
                         {
                             MappableListView.SelectedItem = MappableListView.Items.Where((c) => (c as IMappable).Id == e2.PointOfInterest.Id).FirstOrDefault();
                         };
+                        poiPin.Tapped += (s3, e3) => { e3.Handled = true; };
 
                         Map.AddPointOfInterestPin(poiPin, mapItem.Position);
                     }
@@ -278,7 +327,7 @@ namespace TrafficCams
         }
         #endregion
 
-        private void image_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
+        private void PlayMovie_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
         {
             if ((Boolean)this.DefaultViewModel["MoviePlaying"])
                 StopMovie();
@@ -317,6 +366,29 @@ namespace TrafficCams
                         FlipViewCollectionSource.View.MoveCurrentToNext();
                 }
             }
+        }
+
+        public void StopRefreshing()
+        {
+            StopMovie();
+            SnapshotTimer.Stop();
+        }
+
+        private void MoreResults_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
+        {
+            FrameworkElement s = sender as FrameworkElement;
+
+            // position popup right aligned with right edge of element that prompted its appearance
+            Point p = s.TransformToVisual(MoreResultsPopup.Parent as UIElement).TransformPoint(new Point(0, 0));
+            MoreResultsPopup.HorizontalOffset = p.X - MoreResultsPopup.ActualWidth + s.ActualWidth;
+            MoreResultsPopup.VerticalOffset = p.Y + s.ActualHeight + 10;
+
+            MoreResultsPopup.IsOpen = true;
+        }
+
+        private void CloseButton_Tapped(object sender, Windows.UI.Xaml.Input.TappedRoutedEventArgs e)
+        {
+            MoreResultsPopup.IsOpen = false;
         }
     }
 }

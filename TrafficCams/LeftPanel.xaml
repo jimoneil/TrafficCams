@@ -304,7 +304,7 @@
     <Grid>
         <Grid Margin="12,30,12,10">
             <Grid.RowDefinitions>
-                <RowDefinition Height="auto" />
+                <RowDefinition Height="40" />
                 <RowDefinition Height="*" />
                 <RowDefinition Height="auto" />
             </Grid.RowDefinitions>
@@ -314,13 +314,42 @@
                     <ColumnDefinition Width="auto" />
                     <ColumnDefinition Width="auto" />
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="{Binding AppName}" Margin="8,0" IsHitTestVisible="false" Style="{StaticResource SubheaderTextStyle}" TextTrimming="WordEllipsis" />
-                <Image Grid.Column="1" Source="ms-appx:///Images/warning.png" Height="25" Margin="10,0" 
+                <TextBlock Text="{Binding AppName}" Margin="8,0" IsHitTestVisible="False" Style="{StaticResource SubheaderTextStyle}" TextTrimming="WordEllipsis" />
+                <Image x:Name="WarningImage" Grid.Column="1" Source="ms-appx:///Images/warning.png" Height="24" Margin="10,2,30,0"
                        Visibility="{Binding ApiViewModel.ResultsTruncated, Converter={StaticResource ValueTypeToVisibilityConverter}}"
-                       ToolTipService.ToolTip="More results are available than are shown. Try zooming in on the map to a smaller target area and then refresh the list." />
-                <Button x:Name="button" Grid.Column="2" Content="&#xE117;" FontFamily="Segoe UI Symbol" FontSize="25" Padding="6"
-                        Style="{StaticResource ImageButtonStyle}" Click="Refresh_Click"/>
+                       Tapped="MoreResults_Tapped" />
+                <Button x:Name="RefreshButton" Grid.Column="2" Content="&#xE117;" FontFamily="Segoe UI Symbol" FontSize="25"
+                        Style="{StaticResource ImageButtonStyle}" Click="Refresh_Click" Visibility="Collapsed"/>
             </Grid>
+
+            <Popup x:Name="MoreResultsPopup" IsLightDismissEnabled="True" Width="250" HorizontalAlignment="Left">
+                <Popup.ChildTransitions>
+                    <TransitionCollection>
+                        <PopupThemeTransition />
+                    </TransitionCollection>
+                </Popup.ChildTransitions>
+                <Border Background="WhiteSmoke" Width="{Binding Path=Width, ElementName=MoreResultsPopup}" Padding="3,3,5,18" Tapped="CloseButton_Tapped">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="auto" />
+                            <RowDefinition Height="*"/>
+                        </Grid.RowDefinitions>
+
+                        <TextBlock x:Name="CloseButton" HorizontalAlignment="Right" VerticalAlignment="Top" Grid.Column="1" Text="&#x2715;" 
+                                FontFamily="Segoe UI Symbol" FontSize="16" Foreground="#2a2a2a" Tapped="CloseButton_Tapped"/>
+
+                        <Image Grid.Row="1" Source="ms-appx:///Images/warning.png" Height="24" Margin="12,0,8,0" VerticalAlignment="Top"/>
+
+                        <TextBlock Grid.Row="1" Grid.Column="1" Foreground="#2a2a2a" Margin="12,0"
+                                   Text="More results are available than are shown. Try zooming in on the map to a smaller target area and then refresh the list." 
+                                   FontSize="14" LineHeight="14" TextWrapping="Wrap" HorizontalAlignment="Stretch" VerticalAlignment="Top" />
+                    </Grid>
+                </Border>
+            </Popup>
 
             <ListView x:Name="MappableListView" Grid.Row="1" ItemsSource="{Binding Source={StaticResource ListViewCollectionSource}}" Margin="0,15" 
                       SelectionMode="Single" SelectionChanged="MappableListView_SelectionChanged"
@@ -347,18 +376,16 @@
                                 <TextBlock Text="{Binding Orientation}" TextWrapping="Wrap" VerticalAlignment="Stretch" Margin="0,3,0,0"/>
                             </StackPanel>
                         </StackPanel>
-
                     </DataTemplate>
                 </ListView.ItemTemplate>
             </ListView>
             <TextBlock Grid.Row="1" Margin="8,15" Text="No cameras found in the area." IsHitTestVisible="false" FontSize="20" FontWeight="Light"
                        Visibility="{Binding NoResults, Converter={StaticResource ValueTypeToVisibilityConverter}}"/>
 
-
-            <Grid x:Name="DetailsView" Grid.Row="2" Visibility="Collapsed" Margin="0, 12,0, 0" VerticalAlignment="Bottom">
+            <Grid x:Name="DetailsView" Grid.Row="2" Visibility="Collapsed" Margin="0, 12,0, 0" VerticalAlignment="Bottom" HorizontalAlignment="Center" MaxWidth="354">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="auto" />
-                    <RowDefinition Height="240" />
+                    <RowDefinition Height="auto" />
                 </Grid.RowDefinitions>
 
                 <Grid Margin="10, 0, 10, 0" Visibility="{Binding ApiViewModel.SelectedCamera.TimeLapse.Count, Converter={StaticResource ValueTypeToVisibilityConverter}}">
@@ -382,7 +409,7 @@
                 </Grid>
 
                 <FlipView Grid.Row="1" x:Name="SnapshotsDisplay" ItemsSource="{Binding Source={StaticResource FlipViewCollectionSource}}" 
-                          SelectedItem="{Binding CurrentItem, Source={StaticResource FlipViewCollectionSource}}">
+                          SelectedItem="{Binding CurrentItem, Source={StaticResource FlipViewCollectionSource}}" Height="240">
                     <FlipView.ItemTemplate>
                         <DataTemplate>
                             <Image Source="{Binding Image}" VerticalAlignment="Bottom" Stretch="Uniform" />
@@ -390,11 +417,11 @@
                     </FlipView.ItemTemplate>
                 </FlipView>
 
-                <Image x:Name="image" Grid.Row="1" Source="{Binding MoviePlaying, Converter={StaticResource PlayPauseImageConverter}}" 
+                <Image x:Name="PlayMovieIcon" Grid.Row="1" Source="{Binding MoviePlaying, Converter={StaticResource PlayPauseImageConverter}}" 
                        Height="50" Margin="0,0,4,3" HorizontalAlignment="Right" VerticalAlignment="Bottom" 
                        Visibility="{Binding ApiViewModel.SelectedCamera.TimeLapse.Count, Converter={StaticResource PlaybackVisibilityConverter}}"
-                       Tapped="image_Tapped"
-                       ToolTipService.ToolTip="Play through the past images while new images continue to be retrieved."/>
+                       Tapped="PlayMovie_Tapped"
+                       ToolTipService.ToolTip="Play through saved images."/>
             </Grid>
 
             <local:ApiErrorPanel x:Name="ErrorPanel" Margin="8,60,8,0" Grid.Row="1" DataContext="{Binding ApiStatus}"
@@ -410,14 +437,21 @@
                 <VisualState x:Name="Snapped">
                     <Storyboard>
                         <DoubleAnimation Duration="0" To="204" Storyboard.TargetProperty="(FrameworkElement.Height)" Storyboard.TargetName="SnapshotsDisplay" d:IsOptimized="True"/>
-                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(FrameworkElement.Margin)" Storyboard.TargetName="image">
+                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(FrameworkElement.Margin)" Storyboard.TargetName="PlayMovieIcon">
                             <DiscreteObjectKeyFrame KeyTime="0">
                                 <DiscreteObjectKeyFrame.Value>
                                     <Thickness>0,0,3,3</Thickness>
                                 </DiscreteObjectKeyFrame.Value>
                             </DiscreteObjectKeyFrame>
                         </ObjectAnimationUsingKeyFrames>
-                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="button">
+                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="WarningImage">
+                            <DiscreteObjectKeyFrame KeyTime="0">
+                                <DiscreteObjectKeyFrame.Value>
+                                    <Visibility>Collapsed</Visibility>
+                                </DiscreteObjectKeyFrame.Value>
+                            </DiscreteObjectKeyFrame>
+                        </ObjectAnimationUsingKeyFrames>
+                        <ObjectAnimationUsingKeyFrames Storyboard.TargetProperty="(UIElement.Visibility)" Storyboard.TargetName="RefreshButton">
                         	<DiscreteObjectKeyFrame KeyTime="0">
                         		<DiscreteObjectKeyFrame.Value>
                         			<Visibility>Collapsed</Visibility>
