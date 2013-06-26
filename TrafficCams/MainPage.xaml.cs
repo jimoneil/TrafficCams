@@ -14,6 +14,7 @@ using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls.Primitives;
 using Windows.UI.Xaml.Navigation;
 using Windows.UI.ViewManagement;
+using Windows.ApplicationModel.DataTransfer;
 
 //
 // LICENSE: http://aka.ms/LicenseTerms-SampleApps
@@ -56,16 +57,31 @@ namespace TrafficCams
             /// </summary>
             [DataMember]
             public String SelectedItemId { get; set; }
+
+            /// <summary>
+            /// whether there is a pending refresh on the map
+            /// </summary>
+            [DataMember]
+            public Boolean PendingRefresh { get; set; }
         }
         MainPageState _pageState = new MainPageState();
 
-        Geolocator _geolocator = new Geolocator();
+        Geolocator _geolocator;
         CurrentLocationPin _locationMarker = new CurrentLocationPin();
         Boolean _firstRun; 
+
+        // state variables to detect when a map view refresh should be prompted
+        ApplicationViewState _priorOrientation;
+        Boolean _noRefreshRequiredViewChange;
+        Boolean _retainRefreshRequiredViewChange;
+        BoundingBox _lastBox;
 
         public MainPage()
         {
             this.InitializeComponent();
+
+            // view model
+            this.DefaultViewModel["PendingRefresh"] = false;
 
             // check to see if this is the first time application is being executed by checking for data in local settings.
             // After checking add some notional data as marker for next time app is run. This will be used to determine whether
@@ -77,11 +93,58 @@ namespace TrafficCams
                 ApplicationData.Current.LocalSettings.Values.Add(
                     new System.Collections.Generic.KeyValuePair<string, object>("InitialRunDate", DateTime.UtcNow.ToString()));
 
+            this.SizeChanged += (s, e) =>
+            {
+                // determine if there's been a change in orientation that doesn't require notice that the map view has changed (e.g., app open, snapped mode transitions)              
+                if (_priorOrientation == ApplicationView.Value) return;
+
+                _noRefreshRequiredViewChange = (_priorOrientation == ApplicationViewState.Snapped || ApplicationView.Value == ApplicationViewState.Snapped);
+                _priorOrientation = ApplicationView.Value;
+
+                VisualStateManager.GoToState(LeftPanel, ApplicationView.Value.ToString(), true);
+            };
+
             // whenever map view changes track center point and zoom level in page state
             TheMap.ViewChangeEnded += (s, e) =>
                 {
+                    // save new center/zoom for page state
                     _pageState.MapCenter = new LatLong(TheMap.TargetCenter.Latitude, TheMap.TargetCenter.Longitude);
                     _pageState.Zoom = TheMap.TargetZoomLevel;
+
+                    // ViewChangeEnded fires a bit too often, so retain bounding box to determine if the view truly has changed
+                    BoundingBox thisBox = new BoundingBox(TheMap.TargetBounds.North, TheMap.TargetBounds.South,
+                                      TheMap.TargetBounds.West, TheMap.TargetBounds.East);
+
+                    // determine if view change should notify user of pending refresh requirement
+                    if (_retainRefreshRequiredViewChange)
+                        this.DefaultViewModel["PendingRefresh"] = _pageState.PendingRefresh;
+                    else if (_noRefreshRequiredViewChange)
+                        this.DefaultViewModel["PendingRefresh"] = false;
+                    else if (App.InitialMapResizeHasOccurred)
+                        this.DefaultViewModel["PendingRefresh"] = (thisBox != _lastBox);
+
+                    // update state variables
+                    _lastBox = thisBox;
+                    if (App.InitialMapResizeHasOccurred) _noRefreshRequiredViewChange = false;
+                    _retainRefreshRequiredViewChange = false;
+                    App.InitialMapResizeHasOccurred = true;
+                };
+
+            // if refresh prompt is tapped, refresh the map
+            RefreshPrompt.Tapped += async (s, e) =>
+                {
+                    await LeftPanel.Refresh(_lastBox);
+                    this.DefaultViewModel["PendingRefresh"] = false;
+                };
+
+            // a tap on map will cause refresh is one is predicated
+            TheMap.Tapped += async (s, e) =>
+                {
+                    if ((Boolean)this.DefaultViewModel["PendingRefresh"])
+                    {
+                        await LeftPanel.Refresh(_lastBox);
+                        this.DefaultViewModel["PendingRefresh"] = false;
+                    }
                 };
 
             // set the reference to the current map for the LeftPanel (note: using Element binding will not handle all of the page navigation scenarios)
@@ -132,24 +195,6 @@ namespace TrafficCams
                 if (!Application.Current.Resources.ContainsKey("BingMapsSessionKey"))
                     Application.Current.Resources.Add("BingMapsSessionKey", await TheMap.GetSessionIdAsync());
             };
-
-            // register callback to reset (hide) the user's location, if location access is revoked while app is running
-            _geolocator.StatusChanged += (s, a) =>
-            {
-                this.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
-                    new Windows.UI.Core.DispatchedHandler(() =>
-                    {
-                        if (a.Status == PositionStatus.Disabled)
-                            _locationMarker.Visibility = Visibility.Collapsed;
-                    })
-                );
-            };
-
-            // propagate snapped state change to the user control
-            Window.Current.SizeChanged += (s, e) =>
-                {
-                    VisualStateManager.GoToState(LeftPanel, ApplicationView.Value.ToString(), true);
-                };
         }
 
         /// <summary>
@@ -160,56 +205,61 @@ namespace TrafficCams
         async Task GotoLocation(LatLong position, Boolean showMessage = false)
         {
             Boolean currentLocationRequested = position == null;
-            try
+
+            // a null location is the cue to use geopositioning
+            if (currentLocationRequested)
             {
-                // a null location is the cue to use geopositioning
-                if (currentLocationRequested)
+                try
                 {
-                    try
+                    _geolocator = new Geolocator();
+
+                    // register callback to reset (hide) the user's location, if location access is revoked while app is running
+                    _geolocator.StatusChanged += (s, a) =>
                     {
-                        Geoposition currentPosition = await _geolocator.GetGeopositionAsync();
-                        position = new LatLong(currentPosition.Coordinate.Latitude, currentPosition.Coordinate.Longitude);
-                    }
-                    catch (Exception)
-                    {
-                        if (showMessage)
-                        {
-                            MessageDialog md =
-                                new MessageDialog("This application is not able to determine your current location. This can occur if your machine is operating in Airplane mode or if the GPS sensor is otherwise not operating.");
-                            md.ShowAsync();
-                        }
-                    }
+                        this.Dispatcher.RunAsync(Windows.UI.Core.CoreDispatcherPriority.Normal,
+                            new Windows.UI.Core.DispatchedHandler(() =>
+                            {
+                                if (a.Status == PositionStatus.Disabled)
+                                    _locationMarker.Visibility = Visibility.Collapsed;
+                            })
+                        );
+                    };
+
+                    Geoposition currentPosition = await _geolocator.GetGeopositionAsync();
+                    position = new LatLong(currentPosition.Coordinate.Latitude, currentPosition.Coordinate.Longitude);
                 }
-
-                // don't assume a valid location at this point GPS/Wifi disabled may lead to a null location
-                if (position != null)
+                catch (Exception)
                 {
-                    // register event handler to do work once the view has been reset
-                    TheMap.ViewChangeEnded += TheMap_ViewChangeEndedWithRefreshNeeded;
-
-                    // set pin for current location
-                    if (currentLocationRequested) TheMap.SetCurrentLocationPin(_locationMarker, position);
-
-                    // pan map to desired location with a default zoom level (when complete, ViewChangeEndedWithRefreshNeeded event will fire)
-                    TheMap.SetView(new Location(position.Latitude, position.Longitude), (Double)App.Current.Resources["DefaultZoomLevel"]);
+                    // edge case for initial appearance of map when location services are turned off
+                    App.InitialMapResizeHasOccurred = true;                    
+                    
+                    if (showMessage)
+                    { 
+                        MessageDialog md =
+                            new MessageDialog("This application is unable to determine your current location; however, you can continue to use the other features of the application.\n\nThis condition can occur if you have turned off Location services for the application or are operating in Airplane mode. To reinstate the use of Location services, modify the Location setting on the Permissions flyout of the Settings charm.");
+                        md.ShowAsync();
+                    }
                 }
             }
 
-            // catch exception if location permission not granted
-            catch (UnauthorizedAccessException)
-            {
-                if (showMessage)
-                {
-                    MessageDialog md =
-                        new MessageDialog("This application has not been granted permission to capture your current location. Use the Settings charm to provide this access, then try the operation again.");
-                    md.ShowAsync();
-                }
+            // don't assume a valid location at this point GPS/Wifi disabled may lead to a null location
+            if (position != null)
+            {            
+                // register event handler to do work once the view has been reset
+                TheMap.ViewChangeEnded += TheMap_ViewChangeEndedWithRefreshNeeded;
+
+                // set pin for current location
+                if (currentLocationRequested) TheMap.SetCurrentLocationPin(_locationMarker, position);
+
+                // pan map to desired location with a default zoom level (when complete, ViewChangeEndedWithRefreshNeeded event will fire)
+                _noRefreshRequiredViewChange = true;
+                TheMap.SetView(new Location(position.Latitude, position.Longitude), (Double)App.Current.Resources["DefaultZoomLevel"]);
             }
         }
 
         /// <summary>
         /// Fires when map panning is complete, and the current bounds of the map can be accessed to apply the points of interest
-        /// (note that using TargetBounds in lieu of the event handler led to different results for the same target location depending ont 
+        /// (note that using TargetBounds in lieu of the event handler led to different results for the same target location depending on
         /// the visibilty of the map at the time of invocation - i.e., a navigation initiated from the search results pages reported sligthly
         /// offset TargetBounds
         /// </summary>
@@ -231,14 +281,19 @@ namespace TrafficCams
         {
             // Restore page state
             if ((pageState != null) && (pageState.ContainsKey("MainPageState")))
-            {
                 _pageState = pageState["MainPageState"] as MainPageState;
-            }
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
             base.OnNavigatedTo(e);
+
+            // initialize orientation (used later when determine if map view requires update)
+            _priorOrientation = ApplicationView.Value;
+
+            // register data callback for sharing
+            var dtm = DataTransferManager.GetForCurrentView();
+            dtm.DataRequested += LeftPanel.GetSharedData;
 
             // Navigate to new destination
             if (e.NavigationMode == NavigationMode.New)
@@ -255,8 +310,21 @@ namespace TrafficCams
                 if (_pageState.MapBox != null) LeftPanel.Refresh(_pageState.MapBox, _pageState.SelectedItemId);
 
                 // reset map to last known view
+                _retainRefreshRequiredViewChange = true;
                 TheMap.SetView(new Location(_pageState.MapCenter.Latitude, _pageState.MapCenter.Longitude), _pageState.Zoom, MapAnimationDuration.None);
             }
+        }
+
+        protected override void OnNavigatedFrom(NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+
+            // unregister data callback for sharing
+            var dtm = DataTransferManager.GetForCurrentView();
+            dtm.DataRequested -= LeftPanel.GetSharedData;
+
+            // stop the autorefresh of the cameras since we're navigating away from the page
+            LeftPanel.StopRefreshing();
         }
 
         /// <summary>
@@ -265,6 +333,7 @@ namespace TrafficCams
         /// <param name="pageState">State of the page to be saved in case of app termination while suspended</param>
         protected override void SaveState(Dictionary<string, object> pageState)
         {
+            _pageState.PendingRefresh = (Boolean)this.DefaultViewModel["PendingRefresh"];
             pageState["MainPageState"] = _pageState;
         }
 
@@ -280,7 +349,7 @@ namespace TrafficCams
         {
             // pan map to the user's curent location
             BottomAppBar.IsOpen = false;
-            await GotoLocation(null);
+            await GotoLocation(null, true);
         }
 
         private async void Refresh_Click(object sender, RoutedEventArgs e)
