@@ -13,9 +13,10 @@
     <FileAlignment>512</FileAlignment>
     <ProjectTypeGuids>{BC8A1FFA-BEE3-4634-8014-F334798102B3};{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}</ProjectTypeGuids>
     <PackageCertificateKeyFile>TrafficCams_TemporaryKey.pfx</PackageCertificateKeyFile>
-    <PackageCertificateThumbprint>073A25F9DBAB5ECEF0F4C23F7EE4EEED5F083C76</PackageCertificateThumbprint>
+    <PackageCertificateThumbprint>BF601BD6DEBB24776B8A626D7DDD29645690F33A</PackageCertificateThumbprint>
     <SolutionDir Condition="$(SolutionDir) == '' Or $(SolutionDir) == '*Undefined*'">..\</SolutionDir>
     <RestorePackages>true</RestorePackages>
+    <AppxAutoIncrementPackageRevision>True</AppxAutoIncrementPackageRevision>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <PlatformTarget>AnyCPU</PlatformTarget>
@@ -122,8 +123,14 @@
     <Compile Include="Common\LayoutAwarePage.cs" />
     <Compile Include="Common\SuspensionManager.cs" />
     <Compile Include="Common\ValueTypeToVisibilityConverter.cs" />
-    <Compile Include="Flyouts\WebViewFlyout.xaml.cs">
-      <DependentUpon>WebViewFlyout.xaml</DependentUpon>
+    <Compile Include="Flyouts\AboutFlyout.xaml.cs">
+      <DependentUpon>AboutFlyout.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Flyouts\Privacy.xaml.cs">
+      <DependentUpon>Privacy.xaml</DependentUpon>
+    </Compile>
+    <Compile Include="Flyouts\Support.xaml.cs">
+      <DependentUpon>Support.xaml</DependentUpon>
     </Compile>
     <Compile Include="Mapping\CurrentLocationPin.xaml.cs">
       <DependentUpon>CurrentLocationPin.xaml</DependentUpon>
@@ -155,7 +162,15 @@
     <None Include="TrafficCams_TemporaryKey.pfx" />
   </ItemGroup>
   <ItemGroup>
-    <Page Include="Flyouts\WebViewFlyout.xaml">
+    <Page Include="Flyouts\AboutFlyout.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Flyouts\Privacy.xaml">
+      <Generator>MSBuild:Compile</Generator>
+      <SubType>Designer</SubType>
+    </Page>
+    <Page Include="Flyouts\Support.xaml">
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </Page>
@@ -178,9 +193,6 @@
     <Content Include="Assets\SmallLogo.scale-100.png" />
     <Content Include="Assets\SplashScreen.scale-100.png" />
     <Content Include="Assets\StoreLogo.scale-100.png" />
-    <Content Include="Flyouts\About.htm" />
-    <Content Include="Flyouts\Privacy.htm" />
-    <Content Include="Flyouts\Support.htm" />
     <Content Include="Images\bing.png" />
     <Content Include="Images\tomtom.png" />
     <Content Include="Images\warning.png" />
