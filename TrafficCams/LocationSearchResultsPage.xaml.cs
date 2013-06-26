@@ -4,6 +4,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.ApplicationModel.Search;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
@@ -31,6 +32,27 @@ namespace TrafficCams
             // event callback implementation for dismissing the error panel
             ErrorPanel.Dismissed += (s, e) => this.DefaultViewModel["ApiStatus"] = ApiResponseStatus.Default;
             ErrorPanelSnapped.Dismissed += (s, e) => this.DefaultViewModel["ApiStatus"] = ApiResponseStatus.Default;
+        }
+
+        protected override void OnNavigatedTo(Windows.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            base.OnNavigatedTo(e);
+
+            var dtm = DataTransferManager.GetForCurrentView();
+            dtm.DataRequested += dtm_DataRequested;
+        }
+
+        protected override void OnNavigatedFrom(Windows.UI.Xaml.Navigation.NavigationEventArgs e)
+        {
+            base.OnNavigatedFrom(e);
+
+            var dtm = DataTransferManager.GetForCurrentView(); 
+            dtm.DataRequested -= dtm_DataRequested;
+        }
+
+        void dtm_DataRequested(DataTransferManager sender, DataRequestedEventArgs args)
+        {
+            args.Request.FailWithDisplayText("In this app, you can only share camera images from the main screen.");
         }
 
         /// <summary>
