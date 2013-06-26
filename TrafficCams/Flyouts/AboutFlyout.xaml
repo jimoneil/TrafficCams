@@ -1,0 +1,29 @@
+﻿<!--
+// LICENSE: http://aka.ms/LicenseTerms-SampleApps
+-->
+
+<UserControl
+    x:Class="TrafficCams.Flyouts.AboutFlyout"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DesignHeight="700"
+    d:DesignWidth="346"
+>
+
+    <Grid >
+        <RichTextBlock TextAlignment="Left" FontSize="16" FontFamily="Segoe UI" Foreground="#2a2a2a" IsTextSelectionEnabled="False">
+            <Paragraph>
+                <Bold>Traffic Cams</Bold> provides access to over 13,000 traffic cameras in the United States and Canada via the TomTom API.
+            </Paragraph>
+            <Paragraph Margin="0,15,0,0">Use the map view or the Search charm to find the cameras within a given area,
+    then select a camera to see the latest image available.</Paragraph>
+            <Paragraph Margin="0,15,0,0">As the selected camera refreshes, the next photo in sequence will automatically appear, and you can tap
+    the camera icon at the bottom right of the image to play through the series of photos.</Paragraph>
+            <Paragraph Margin="0,15,0,0">Via the app bar you can overlay traffic and switch between and aerial and road modes.</Paragraph>
+            <Paragraph Margin="0,30,0,0">Copyright 2013, Rycolan Enterprises.</Paragraph>
+        </RichTextBlock>
+    </Grid>
+</UserControl>

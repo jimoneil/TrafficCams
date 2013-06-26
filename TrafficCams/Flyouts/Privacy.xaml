@@ -1,0 +1,26 @@
+﻿<!--
+// LICENSE: http://aka.ms/LicenseTerms-SampleApps
+-->
+
+<UserControl
+    x:Class="TrafficCams.Flyouts.PrivacyFlyout"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    d:DesignHeight="700"
+    d:DesignWidth="346"
+>
+
+    <Grid >
+        <RichTextBlock TextAlignment="Left" FontSize="16" FontFamily="Segoe UI" Foreground="#2a2a2a" IsTextSelectionEnabled="False">
+            <Paragraph>
+                <Bold>Traffic Cams</Bold> does not access, transmit, or store any personal information about the user of this application.
+            </Paragraph>
+            <Paragraph Margin="0,15,0,0">
+                The application utilizes location services to plot the user's current position on a map, but that functionality is not a critical feature and can be turned off via the Permissions setting.
+            </Paragraph>
+        </RichTextBlock>
+    </Grid>
+</UserControl>
