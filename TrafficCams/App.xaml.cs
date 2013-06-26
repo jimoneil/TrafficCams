@@ -31,6 +31,9 @@ namespace TrafficCams
         /// </summary>
         public static String DisplayName { get; private set; }
 
+        // somewhat of a kludge to detect double firing of Map.ViewChangeEnded on initial startup of app
+        internal static Boolean InitialMapResizeHasOccurred = false;
+
         /// <summary>
         /// Initializes the singleton application object.  This is the first line of authored code
         /// executed, and as such is the logical equivalent of main() or WinMain().
@@ -211,15 +214,15 @@ namespace TrafficCams
                 {
                     e.Request.ApplicationCommands.Add(
                         new SettingsCommand("About", "About",
-                                            (x) => ShowFlyout("About", new WebViewFlyout("/Flyouts/About.htm")))
+                                            (x) => ShowFlyout("About", new AboutFlyout()))
                     );
                     e.Request.ApplicationCommands.Add(
                         new SettingsCommand("Support", "Support",
-                                            (x) => ShowFlyout("Support", new WebViewFlyout("/Flyouts/Support.htm")))
+                                            (x) => ShowFlyout("Support", new SupportFlyout()))
                     );
                     e.Request.ApplicationCommands.Add(
                         new SettingsCommand("Privacy", "Privacy",
-                                            (x) => ShowFlyout("Privacy", new WebViewFlyout("/Flyouts/Privacy.htm")))
+                                            (x) => ShowFlyout("Privacy", new PrivacyFlyout()))
                     );
                 };
         }
