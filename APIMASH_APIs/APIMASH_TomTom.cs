@@ -129,7 +129,7 @@ namespace APIMASH_TomTom
         public String Name { get; set; }
         public String Orientation { get; set; }
         public Double RefreshRate { get; set; }
-        internal byte[] ImageBytes { get; set; }
+        public byte[] LastImageBytes { get; set; }
 
         private ObservableCollection<TimeLapseImage> _timeLapse;
         public ObservableCollection<TimeLapseImage> TimeLapse
@@ -227,9 +227,9 @@ namespace APIMASH_TomTom
             if (viewModel == null) return false;
 
             // only add the image if there are none or it differ from last one stored for this camera
-            if ((viewModel.TimeLapse.Count == 0) || (!Enumerable.SequenceEqual<Byte>(viewModel.ImageBytes, imageBytes)))
+            if ((viewModel.TimeLapse.Count == 0) || (!Enumerable.SequenceEqual<Byte>(viewModel.LastImageBytes, imageBytes)))
             {
-                viewModel.ImageBytes = imageBytes;
+                viewModel.LastImageBytes = imageBytes;
                 viewModel.TimeLapse.Add(new TimeLapseImage(camImage, DateTime.UtcNow));
 
                 return true;
